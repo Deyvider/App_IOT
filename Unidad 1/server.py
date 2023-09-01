@@ -24,9 +24,9 @@ class MyHTTPRequestHandler(BaseHTTPRequestHandler):
         global contador 
 
         if(body_jyson['action'] == 'asc'):
-            contador += 1
+            contador += body_jyson['value']
         elif(body_jyson['action'] == 'desc'):
-            contador -= 1
+            contador -= body_jyson['value']
 
         # Print the complete HTTP request
         print("\n----- Incoming POST Request -----")
