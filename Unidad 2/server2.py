@@ -18,7 +18,13 @@ class MyHTTPRequestHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers["Content-Length"])
         post_data = self.rfile.read(content_length)
 
-        body_jyson = json.loads(post_data.decode())
+        try:
+         body_jyson = json.loads(post_data.decode())
+        except: 
+            self._set_response("aplication/Json")
+            self.wfile.write(json.dumps({"message": "Invalid JSON"}).encode())
+            return
+        
         print(body_jyson['action'])
 
         global contador 
