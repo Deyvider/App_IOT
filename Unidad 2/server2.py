@@ -3,54 +3,69 @@ import json
 
 contador = 11
 
+
 class MyHTTPRequestHandler(BaseHTTPRequestHandler):
-    def _set_response(self, content_type="text/plain"):
-        self.send_response(200)
-        self.send_header("Content-type", content_type)
-        self.end_headers()
 
-    def do_GET(self):
-        self._set_response()
-        respuesta = "El valor es: "+ str(contador)
-        self.wfile.write(respuesta.encode())
+  def _set_response(self, content_type="text/plain"):
+    self.send_response(200)
+    self.send_header("Content-type", content_type)
+    self.end_headers()
 
-    def do_POST(self):
-        content_length = int(self.headers["Content-Length"])
-        post_data = self.rfile.read(content_length)
+  def throw_custom_error(self, message):
+    self._set_response("application/json")
+    self.wfile.write(json.dumps({"message": message}).encode())
 
-        try:
-         body_jyson = json.loads(post_data.decode())
-        except: 
-            self._set_response("aplication/Json")
-            self.wfile.write(json.dumps({"message": "Invalid JSON"}).encode())
-            return
-        
-        print(body_jyson['action'])
+  def do_GET(self):
+    self._set_response()
+    respuesta = "El valor es: " + str(contador)
+    self.wfile.write(respuesta.encode())
 
-        global contador 
+  def do_POST(self):
+    content_length = int(self.headers["Content-Length"])
+    post_data = self.rfile.read(content_length)
 
-        if(body_jyson['action'] == 'asc'):
-            contador += body_jyson['value']
-        elif(body_jyson['action'] == 'desc'):
-            contador -= body_jyson['value']
+    try:
+      body_json = json.loads(post_data.decode())
+    except:
+      self.throw_custom_error("Invalid JSON")
+      return
 
-        # Print the complete HTTP request
-        print("\n----- Incoming POST Request -----")
-        print(f"Requestline: {self.requestline}")
-        print(f"Headers:\n{self.headers}")
-        print(f"Body:\n{post_data.decode()}")
-        print("-------------------------------")
+    global contador
 
-        # Respond to the client
-        response_data = json.dumps({"message": "Received POST data", "data": post_data.decode(), "status": "OK"})
-        self._set_response("application/json")
-        self.wfile.write(response_data.encode())
+    # Check if action and value are present
+    if (body_json.get('action') is None or body_json.get('value') is None):
+      self.throw_custom_error("Missing action or value")
+      return
+
+    # Check if action is valid
+    if (body_json['action'] != 'asc' and body_json['action'] != 'desc'):
+      self.throw_custom_error("Invalid action")
+      return
+
+    # Check if value is valid, integer
+    try:
+      int(body_json['value'])
+    except:
+      self.throw_custom_error("Invalid value")
+      return
+
+    if (body_json['action'] == 'asc'):
+      contador += int(body_json['value'])
+    elif (body_json['action'] == 'desc'):
+      contador -= int(body_json['value'])
+
+    # Respond to the client
+    response_data = json.dumps({"message": "Received POST data, new value: " + str(contador), "status": "OK"})
+    self._set_response("application/json")
+    self.wfile.write(response_data.encode())
+
 
 def run_server(server_class=HTTPServer, handler_class=MyHTTPRequestHandler, port=7800):
-    server_address = ("", port)
-    httpd = server_class(server_address, handler_class)
-    print(f"Starting server on port {port}...")
-    httpd.serve_forever()
+  server_address = ("", port)
+  httpd = server_class(server_address, handler_class)
+  print(f"Starting server on port {port}...")
+  httpd.serve_forever()
+
 
 if __name__ == "__main__":
-    run_server()
+  run_server()
